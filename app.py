@@ -10,10 +10,11 @@ from pycaret.classification import predict_model as predict_cls
 from pycaret.clustering import load_model as load_clu
 from pycaret.clustering import predict_model as predict_clu
 
+# Optional GenAI module; app must work even if it's missing or not configured
 try:
     from genai_prescriptions import generate_prescription
-except Exception:
-    generate_prescription = None  # optional module
+except Exception:  # noqa: BLE001
+    generate_prescription = None  # type: ignore
 
 st.set_page_config(page_title="Cognitive SOAR", layout="wide")
 
@@ -21,7 +22,7 @@ st.set_page_config(page_title="Cognitive SOAR", layout="wide")
 @st.cache_resource
 def load_models() -> Tuple[object, Optional[object]]:
     """
-    Train-on-first-run: if model artifacts are missing (e.g., on Streamlit Cloud),
+    Train-on-first-run: if model artifacts are missing (e.g., Streamlit Cloud),
     run train_model.train_models() to create them, then load with PyCaret.
 
     IMPORTANT: Use base names when calling PyCaret load_model; it appends .pkl internally.
@@ -40,7 +41,7 @@ def load_models() -> Tuple[object, Optional[object]]:
     model_cls = load_cls("models/phishing_url_detector")
     try:
         model_clu = load_clu("models/threat_actor_profiler")
-    except Exception:
+    except Exception:  # noqa: BLE001
         model_clu = None
     return model_cls, model_clu
 
@@ -108,36 +109,46 @@ def actor_blurb(name: str) -> str:
     return "Unspecified profile."
 
 
-def render_visual_insights():
+def render_visual_insights() -> None:
     path = "models/feature_importance.png"
     if os.path.exists(path):
-        # Use minimal args for broad Streamlit compatibility
+        # Keep args minimal for broad Streamlit compatibility
         st.image(path, caption="Feature importance from training")
     else:
         st.info("Feature importance plot not found. Re-run training to regenerate.")
 
 
-def render_prescription(provider: str, payload: Dict[str, int]):
-    if generate_prescription is None or provider == "Local fallback":
-        st.warning("GenAI module not found or provider set to fallback; showing local plan.")
-        provider = "local"
+def render_prescription(provider: str, payload: Dict[str, int]) -> None:
+    # Prefer GenAI only if selected AND module exists. Never crash if secrets are missing.
+    use_genai = generate_prescription is not None and provider != "Local fallback"
 
-    plan = (
-        generate_prescription(provider, payload)
-        if generate_prescription is not None
-        else {
-            "summary": "Local fallback plan.",
-            "risk_level": "Medium",
+    plan = None
+    if use_genai:
+        try:
+            plan = generate_prescription(provider, payload)  # type: ignore[call-arg]
+        except Exception:  # noqa: BLE001
+            plan = None
+
+    if plan is None:
+        # Local fallback (no keys / provider error / provider disabled)
+        plan = {
+            "summary": (
+                "Suspicious URL consistent with phishing; containment and triage required."
+            ),
+            "risk_level": "High",
             "recommended_actions": [
-                "Block URL at gateway.",
-                "Hunt for IOCs in SIEM for last 7 days.",
-                "Notify potentially impacted users.",
+                "Block the URL at the gateway and mail filters.",
+                "Quarantine any emails containing the URL.",
+                "Search SIEM for requests to this URL and related domains (last 7 days).",
+                "Notify potentially affected users and reset credentials as needed.",
+                "Open an incident ticket and attach indicators/evidence.",
             ],
             "communication_draft": (
-                "A suspicious URL was detected and blocked while we investigate."
+                "We detected and blocked a suspicious URL while we investigate. "
+                "Please avoid clicking similar links. We will share next steps if "
+                "action is required."
             ),
         }
-    )
 
     st.subheader("Prescriptive plan")
     st.write(f"**Risk:** {plan.get('risk_level','Unknown')}")
@@ -149,13 +160,14 @@ def render_prescription(provider: str, payload: Dict[str, int]):
     st.code(plan.get("communication_draft", ""), language="markdown")
 
 
-def main():
+def main() -> None:
     st.title("Cognitive SOAR — From Prediction to Attribution")
     model_cls, model_clu = load_models()
 
     with st.sidebar:
         provider = st.selectbox(
-            "Prescriptions Provider", ["Local fallback", "OpenAI", "Gemini"]
+            "Prescriptions Provider",
+            ["Local fallback", "OpenAI", "Gemini"],
         )
         st.divider()
         features = sidebar_inputs()
@@ -181,8 +193,8 @@ def main():
             st.write(f"Verdict → **{verdict}**")
             time.sleep(0.1)
 
-            cluster_name = None
-            cluster_id = None
+            cluster_name: Optional[str] = None
+            cluster_id: Optional[int] = None
             if label == 1 and model_clu is not None:
                 st.write("Step 3: Threat Attribution (Clustering)")
                 clu_out = predict_clu(model_clu, data=input_df)
