@@ -1,2 +1,11 @@
 .streamlit/
 .streamlit/
+models/
+data/
+__pycache__/
+catboost_info/
+.streamlit/
+.env
+logs.log
+hom8
+hom8.pub
