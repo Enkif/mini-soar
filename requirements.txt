@@ -5,3 +5,4 @@ streamlit
 google-generativeai
 openai
 requests
+scikit-learn==1.4.2
