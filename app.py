@@ -1,5 +1,6 @@
 import os
 import time
+from pathlib import Path
 from typing import Dict, Tuple, Optional
 
 import pandas as pd
@@ -11,21 +12,33 @@ from pycaret.clustering import predict_model as predict_clu
 
 try:
     from genai_prescriptions import generate_prescription
-except Exception:  # module is optional
-    generate_prescription = None  # type: ignore
-
+except Exception:
+    generate_prescription = None  # optional module
 
 st.set_page_config(page_title="Cognitive SOAR", layout="wide")
 
 
 @st.cache_resource
 def load_models() -> Tuple[object, Optional[object]]:
-    cls_path = "models/phishing_url_detector.pkl"
-    clu_path = "models/threat_actor_profiler.pkl"
+    """
+    Train-on-first-run: if model artifacts are missing (e.g., on Streamlit Cloud),
+    run train_model.train_models() to create them, then load with PyCaret.
+    NOTE: Use base names when calling PyCaret load_model; it appends .pkl internally.
+    """
+    models_dir = Path("models")
+    cls_pkl = models_dir / "phishing_url_detector.pkl"
+    clu_pkl = models_dir / "threat_actor_profiler.pkl"
 
-    model_cls = load_cls(cls_path)
+    if not (cls_pkl.exists() and clu_pkl.exists()):
+        from train_model import train_models  # lazy import to avoid extra work at import time
+        models_dir.mkdir(parents=True, exist_ok=True)
+        with st.spinner("Training models (first run)… this takes ~1–2 minutes"):
+            train_models()
+
+    # Load by base names (no .pkl)
+    model_cls = load_cls("models/phishing_url_detector")
     try:
-        model_clu = load_clu(clu_path)
+        model_clu = load_clu("models/threat_actor_profiler")
     except Exception:
         model_clu = None
     return model_cls, model_clu
@@ -68,7 +81,7 @@ def sidebar_inputs() -> Dict[str, int]:
 
 
 def get_cluster_id(df: pd.DataFrame) -> int:
-    # PyCaret clustering sometimes returns "Cluster 2" as a string column.
+    # PyCaret sometimes returns "Cluster 2" as a string column.
     col = next((c for c in df.columns if c.lower().startswith("cluster")), "Cluster")
     raw = df[col].iloc[0]
     if isinstance(raw, str):
