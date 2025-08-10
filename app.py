@@ -23,16 +23,17 @@ def load_models() -> Tuple[object, Optional[object]]:
     """
     Train-on-first-run: if model artifacts are missing (e.g., on Streamlit Cloud),
     run train_model.train_models() to create them, then load with PyCaret.
-    NOTE: Use base names when calling PyCaret load_model; it appends .pkl internally.
+
+    IMPORTANT: Use base names when calling PyCaret load_model; it appends .pkl internally.
     """
     models_dir = Path("models")
     cls_pkl = models_dir / "phishing_url_detector.pkl"
     clu_pkl = models_dir / "threat_actor_profiler.pkl"
 
     if not (cls_pkl.exists() and clu_pkl.exists()):
-        from train_model import train_models  # lazy import to avoid extra work at import time
+        from train_model import train_models  # lazy import
         models_dir.mkdir(parents=True, exist_ok=True)
-        with st.spinner("Training models (first run)… this takes ~1–2 minutes"):
+        with st.spinner("Training models (first run)… this may take ~1–2 minutes"):
             train_models()
 
     # Load by base names (no .pkl)
@@ -110,7 +111,8 @@ def actor_blurb(name: str) -> str:
 def render_visual_insights():
     path = "models/feature_importance.png"
     if os.path.exists(path):
-        st.image(path, caption="Feature importance from training", use_container_width=True)
+        # Use minimal args for broad Streamlit compatibility
+        st.image(path, caption="Feature importance from training")
     else:
         st.info("Feature importance plot not found. Re-run training to regenerate.")
 
