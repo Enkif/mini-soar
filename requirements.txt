@@ -1,9 +1,9 @@
 streamlit==1.36.0
 pycaret==3.3.2
 scikit-learn==1.4.2
-pandas==2.2.2
+pandas==2.1.4
 numpy==1.26.4
-scipy==1.12.0
+scipy==1.11.4
 openai==1.40.0
 google-generativeai==0.7.2
 requests==2.32.3
