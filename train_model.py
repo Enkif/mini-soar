@@ -7,8 +7,6 @@ import pandas as pd
 from pycaret.classification import (
     compare_models,
     finalize_model,
-    load_model,
-    predict_model,
     save_model,
     setup,
     plot_model,
@@ -17,15 +15,16 @@ from pycaret.clustering import create_model as clu_create
 from pycaret.clustering import save_model as clu_save
 from pycaret.clustering import setup as clu_setup
 
-
 RNG = np.random.default_rng(42)
 
 
 def _tri(p_neg: float, p_zero: float, p_pos: float) -> int:
+    """Sample from {-1, 0, 1} with given probabilities."""
     return RNG.choice([-1, 0, 1], p=[p_neg, p_zero, p_pos]).item()  # type: ignore[call-overload]
 
 
 def synth_profile_state(n: int) -> pd.DataFrame:
+    """State-sponsored: subtle deception, valid SSL, low noise."""
     return pd.DataFrame(
         {
             "having_IP_Address": RNG.choice([-1, 1], size=n, p=[0.95, 0.05]),
@@ -36,9 +35,9 @@ def synth_profile_state(n: int) -> pd.DataFrame:
             "Prefix_Suffix": RNG.choice([-1, 1], size=n, p=[0.2, 0.8]),
             "having_Sub_Domain": RNG.choice([-1, 0, 1], size=n, p=[0.4, 0.4, 0.2]),
             "SSLfinal_State": RNG.choice([-1, 0, 1], size=n, p=[0.05, 0.05, 0.9]),
-            "URL_of_Anchor": [ _tri(0.6, 0.2, 0.2) for _ in range(n) ],
-            "Links_in_tags": [ _tri(0.6, 0.2, 0.2) for _ in range(n) ],
-            "SFH": [ _tri(0.6, 0.2, 0.2) for _ in range(n) ],
+            "URL_of_Anchor": [_tri(0.6, 0.2, 0.2) for _ in range(n)],
+            "Links_in_tags": [_tri(0.6, 0.2, 0.2) for _ in range(n)],
+            "SFH": [_tri(0.6, 0.2, 0.2) for _ in range(n)],
             "Abnormal_URL": RNG.choice([-1, 1], size=n, p=[0.8, 0.2]),
             "has_political_keyword": RNG.choice([-1, 1], size=n, p=[0.95, 0.05]),
             "_profile": ["state"] * n,
@@ -48,6 +47,7 @@ def synth_profile_state(n: int) -> pd.DataFrame:
 
 
 def synth_profile_crime(n: int) -> pd.DataFrame:
+    """Organized cybercrime: noisy, shorteners, IPs, abnormal structure."""
     return pd.DataFrame(
         {
             "having_IP_Address": RNG.choice([-1, 1], size=n, p=[0.2, 0.8]),
@@ -58,9 +58,9 @@ def synth_profile_crime(n: int) -> pd.DataFrame:
             "Prefix_Suffix": RNG.choice([-1, 1], size=n, p=[0.3, 0.7]),
             "having_Sub_Domain": RNG.choice([-1, 0, 1], size=n, p=[0.2, 0.3, 0.5]),
             "SSLfinal_State": RNG.choice([-1, 0, 1], size=n, p=[0.6, 0.2, 0.2]),
-            "URL_of_Anchor": [ _tri(0.2, 0.2, 0.6) for _ in range(n) ],
-            "Links_in_tags": [ _tri(0.2, 0.2, 0.6) for _ in range(n) ],
-            "SFH": [ _tri(0.2, 0.2, 0.6) for _ in range(n) ],
+            "URL_of_Anchor": [_tri(0.2, 0.2, 0.6) for _ in range(n)],
+            "Links_in_tags": [_tri(0.2, 0.2, 0.6) for _ in range(n)],
+            "SFH": [_tri(0.2, 0.2, 0.6) for _ in range(n)],
             "Abnormal_URL": RNG.choice([-1, 1], size=n, p=[0.2, 0.8]),
             "has_political_keyword": RNG.choice([-1, 1], size=n, p=[0.9, 0.1]),
             "_profile": ["crime"] * n,
@@ -70,6 +70,7 @@ def synth_profile_crime(n: int) -> pd.DataFrame:
 
 
 def synth_profile_hacktivist(n: int) -> pd.DataFrame:
+    """Hacktivist: opportunistic, political keywords, mixed signals."""
     return pd.DataFrame(
         {
             "having_IP_Address": RNG.choice([-1, 1], size=n, p=[0.6, 0.4]),
@@ -80,9 +81,9 @@ def synth_profile_hacktivist(n: int) -> pd.DataFrame:
             "Prefix_Suffix": RNG.choice([-1, 1], size=n, p=[0.6, 0.4]),
             "having_Sub_Domain": RNG.choice([-1, 0, 1], size=n, p=[0.5, 0.4, 0.1]),
             "SSLfinal_State": RNG.choice([-1, 0, 1], size=n, p=[0.5, 0.3, 0.2]),
-            "URL_of_Anchor": [ _tri(0.4, 0.2, 0.4) for _ in range(n) ],
-            "Links_in_tags": [ _tri(0.4, 0.2, 0.4) for _ in range(n) ],
-            "SFH": [ _tri(0.4, 0.2, 0.4) for _ in range(n) ],
+            "URL_of_Anchor": [_tri(0.4, 0.2, 0.4) for _ in range(n)],
+            "Links_in_tags": [_tri(0.4, 0.2, 0.4) for _ in range(n)],
+            "SFH": [_tri(0.4, 0.2, 0.4) for _ in range(n)],
             "Abnormal_URL": RNG.choice([-1, 1], size=n, p=[0.5, 0.5]),
             "has_political_keyword": RNG.choice([-1, 1], size=n, p=[0.2, 0.8]),
             "_profile": ["hacktivist"] * n,
@@ -92,6 +93,7 @@ def synth_profile_hacktivist(n: int) -> pd.DataFrame:
 
 
 def synth_benign(n: int) -> pd.DataFrame:
+    """Benign population with mostly clean signals."""
     return pd.DataFrame(
         {
             "having_IP_Address": RNG.choice([-1, 1], size=n, p=[0.98, 0.02]),
@@ -102,9 +104,9 @@ def synth_benign(n: int) -> pd.DataFrame:
             "Prefix_Suffix": RNG.choice([-1, 1], size=n, p=[0.95, 0.05]),
             "having_Sub_Domain": RNG.choice([-1, 0, 1], size=n, p=[0.2, 0.7, 0.1]),
             "SSLfinal_State": RNG.choice([-1, 0, 1], size=n, p=[0.05, 0.05, 0.9]),
-            "URL_of_Anchor": [ _tri(0.7, 0.2, 0.1) for _ in range(n) ],
-            "Links_in_tags": [ _tri(0.7, 0.2, 0.1) for _ in range(n) ],
-            "SFH": [ _tri(0.7, 0.2, 0.1) for _ in range(n) ],
+            "URL_of_Anchor": [_tri(0.7, 0.2, 0.1) for _ in range(n)],
+            "Links_in_tags": [_tri(0.7, 0.2, 0.1) for _ in range(n)],
+            "SFH": [_tri(0.7, 0.2, 0.1) for _ in range(n)],
             "Abnormal_URL": RNG.choice([-1, 1], size=n, p=[0.97, 0.03]),
             "has_political_keyword": RNG.choice([-1, 1], size=n, p=[0.99, 0.01]),
             "_profile": ["benign"] * n,
@@ -124,13 +126,15 @@ def generate_data(n_per_class: int = 300) -> pd.DataFrame:
     return df.sample(frac=1.0, random_state=42).reset_index(drop=True)
 
 
-def ensure_dirs():
+def ensure_dirs() -> None:
     Path("models").mkdir(parents=True, exist_ok=True)
     Path("data").mkdir(parents=True, exist_ok=True)
 
 
 def train_models() -> Tuple[str, str]:
+    """Train classifier and k-means clusterer; save artifacts under models/."""
     ensure_dirs()
+
     print("Generating data…")
     df = generate_data()
     df.to_csv("data/phishing_synthetic.csv", index=False)
@@ -143,14 +147,15 @@ def train_models() -> Tuple[str, str]:
         verbose=False,
         session_id=42,
     )
+    # keep to sklearn-only models for portability
     best = compare_models(n_select=1, include=["rf", "et", "gbc"])
     final = finalize_model(best)
+    # IMPORTANT: pass base name; PyCaret appends .pkl
     save_model(final, "models/phishing_url_detector")
 
-    # Optional: save feature importance image
+    # Save feature importance image if available
     try:
         plot_model(final, plot="feature", save=True)
-        # PyCaret saves as 'Feature Importance.png' in cwd
         src = Path("Feature Importance.png")
         if src.exists():
             src.rename("models/feature_importance.png")
@@ -167,8 +172,9 @@ def train_models() -> Tuple[str, str]:
 
 
 if __name__ == "__main__":
-    if not (Path("models/phishing_url_detector.pkl").exists() and
-            Path("models/threat_actor_profiler.pkl").exists()):
+    cls_pkl = Path("models/phishing_url_detector.pkl")
+    clu_pkl = Path("models/threat_actor_profiler.pkl")
+    if not (cls_pkl.exists() and clu_pkl.exists()):
         train_models()
     else:
         print("Models already exist. Skipping training.")
