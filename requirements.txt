@@ -1,0 +1,7 @@
+pandas
+numpy
+pycaret[full]
+streamlit
+google-generativeai
+openai
+requests
